@@ -1,0 +1,24 @@
+// Theme colors
+.theme-catppucin-dark-minimal.light,
+.theme-catppucin-dark-minimal.dark {
+  --highlight-primary: #a5adcb;
+  --highlight-secondary: #363a4f;
+  --highlight-hover: #363a4f;
+  --background: #24273a;
+  --card-background: #363a4f;
+  --text: #cad3f5;
+  --text-header: #cad3f5;
+  --text-title: #cad3f5;
+  --text-subtitle: #a5adcb;
+  --card-shadow: rgba(0, 0, 0, 0.5);
+  --link: #a6da95;
+  --link-hover: #a6da95;
+  --background-image: none;
+}
+
+// theme
+.theme-catppucin-dark-minimal {
+  .navbar {
+    display: none !important;
+  }
+}
