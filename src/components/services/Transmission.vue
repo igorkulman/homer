@@ -2,10 +2,9 @@
   <Generic :item="item">
     <template #content>
       <p class="title is-4">{{ item.name }}</p>
-      <p v-if="item.subtitle" class="subtitle is-6">{{ item.subtitle }}</p>
-      <p v-else class="subtitle is-6">
+      <p class="subtitle is-6">
         <span v-if="error" class="error">An error has occurred.</span>
-        <template v-else>
+        <template v-else-if="count > 0 || shouldShowWhenEmpty">
           <span class="down monospace">
             <p class="fas fa-download"></p>
             {{ downRate }}
@@ -18,7 +17,7 @@
       </p>
     </template>
     <template #indicator>
-      <span v-if="!error" class="count"
+      <span v-if="!error && (count > 0 || shouldShowWhenEmpty)" class="count"
         >{{ count || 0 }}
         <template v-if="(count || 0) === 1">torrent</template>
         <template v-else>torrents</template>
@@ -35,16 +34,16 @@ const units = ["B", "KB", "MB", "GB"];
 // value for which we have a unit is determined. Return the value with
 // up to two decimals as a string and unit/s appended.
 const displayRate = (rate) => {
-  let unitIndex = 0;
+  let i = 0;
 
-  while (rate > 1000 && unitIndex < units.length - 1) {
+  while (rate > 1000 && i < units.length) {
     rate /= 1000;
-    unitIndex++;
+    i++;
   }
   return (
     Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(
       rate || 0,
-    ) + ` ${units[unitIndex]}/s`
+    ) + ` ${units[i]}/s`
   );
 };
 
@@ -66,13 +65,28 @@ export default {
     upRate: function () {
       return displayRate(this.ul);
     },
+    shouldShowWhenEmpty: function () {
+      // Default to true (show when empty) unless explicitly set to false
+      return this.item.showWhenEmpty !== false;
+    },
   },
   created() {
-    const interval = parseInt(this.item.interval, 10) || 0;
+    // Validate that endpoint is configured
+    if (!this.endpoint) {
+      this.error = true;
+      console.error("Transmission service: No endpoint configured");
+      return;
+    }
 
-    // Set up interval if configured
-    if (interval > 0) {
-      setInterval(() => this.getStats(), interval);
+    const rateInterval = parseInt(this.item.rateInterval, 10) || 0;
+    const torrentInterval = parseInt(this.item.torrentInterval, 10) || 0;
+
+    // Set up intervals if configured (rate and torrent intervals can be different)
+    if (rateInterval > 0) {
+      setInterval(() => this.getStats(), rateInterval);
+    }
+    if (torrentInterval > 0) {
+      setInterval(() => this.getStats(), torrentInterval);
     }
 
     // Initial fetch
@@ -82,14 +96,27 @@ export default {
     /**
      * Makes a request to Transmission RPC API with proper session handling
      * @param {string} method - The RPC method to call
+     * @param {Object} requestArgs - Arguments for the RPC method
      * @returns {Promise<Object>} RPC response
      */
-    transmissionRequest: async function (method) {
-      const options = this.getRequestHeaders(method);
+    transmissionRequest: async function (method, requestArgs = {}) {
+      const requestData = {
+        method: method,
+        arguments: requestArgs,
+      };
+
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      };
 
       // Add HTTP Basic Auth if credentials are provided
-      if (this.item.auth) {
-        options.headers["Authorization"] = `Basic ${btoa(this.item.auth)}`;
+      if (this.item.username && this.item.password) {
+        const credentials = btoa(`${this.item.username}:${this.item.password}`);
+        options.headers["Authorization"] = `Basic ${credentials}`;
       }
 
       // Add session ID header if we have one
@@ -98,54 +125,50 @@ export default {
       }
 
       try {
-        return await this.fetch("transmission/rpc", options);
-      } catch (error) {
-        // Handle Transmission's 409 session requirement
-        if (error.message.includes("409")) {
-          const sessionOptions = this.getRequestHeaders("session-get");
+        const response = await fetch(
+          this.endpoint + "/transmission/rpc",
+          options,
+        );
 
-          const sessionResponse = this.fetch(
-            "transmission/rpc",
-            sessionOptions,
-          );
-          if (error.message.includes("409")) {
-            this.sessionId = sessionResponse.headers.get(
-              "X-Transmission-Session-Id",
+        // Handle session ID requirement
+        if (response.status === 409) {
+          this.sessionId = response.headers.get("X-Transmission-Session-Id");
+          if (this.sessionId) {
+            options.headers["X-Transmission-Session-Id"] = this.sessionId;
+            const retryResponse = await fetch(
+              this.endpoint + "/transmission/rpc",
+              options,
             );
-            if (this.sessionId) {
-              options.headers["X-Transmission-Session-Id"] = this.sessionId;
-              return await this.fetch("transmission/rpc", options);
-            }
+            return await retryResponse.json();
           }
         }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
         console.error("Transmission RPC error:", error);
         throw error;
       }
-    },
-    getRequestHeaders: function (method) {
-      return {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ method }),
-      };
     },
     getStats: async function () {
       try {
         // Get session stats for transfer rates and torrent count
         const statsResponse = await this.transmissionRequest("session-stats");
-        if (statsResponse?.result !== "success") {
+
+        if (statsResponse && statsResponse.result === "success") {
+          const stats = statsResponse.arguments;
+          this.dl = stats.downloadSpeed ?? 0;
+          this.ul = stats.uploadSpeed ?? 0;
+          this.count = stats.activeTorrentCount ?? 0;
+          this.error = false;
+        } else {
           throw new Error(
             `Transmission RPC failed: ${statsResponse?.result || "Unknown error"}`,
           );
         }
-
-        const stats = statsResponse.arguments;
-        this.dl = stats.downloadSpeed ?? 0;
-        this.ul = stats.uploadSpeed ?? 0;
-        this.count = stats.activeTorrentCount ?? 0;
-        this.error = false;
       } catch (e) {
         this.error = true;
         console.error("Transmission service error:", e);

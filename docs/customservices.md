@@ -4,11 +4,11 @@ Smart cards provide specific integrations for external services. They display ad
 
 Each service integration has different requirements and may need additional configuration parameters (see card list below).
 
-> [!WARNING]  
+> [!WARNING]
 > Your `config.yml` file is exposed at `/assets/config.yml` via HTTP. Any sensitive information (like API keys)
 > in this file is visible to anyone who can access your Homer instance. Only include API keys if your Homer
 > instance is protected by authentication or access controls **or use a proxy like [`CORSair`](https://github.com/bastienwirtz/corsair)
->  to inject your credentials safely**, using environment variable on the server side. 
+>  to inject your credentials safely**, using environment variable on the server side.
 
 Available services are located in `src/components/`:
 
@@ -60,7 +60,7 @@ Available services are located in `src/components/`:
 - [Wallabag](#wallabag)
 - [What's Up Docker](#whats-up-docker)
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > Smart cards that interact with external services are subject to CORS restrictions, therefore require one of the following:
 >
 > - All services hosted on the **same domain** as Homer (mydomain.tld/pihole, mydomain.tld/proxmox) to avoid cross-domain request entirely.
@@ -75,7 +75,7 @@ Available services are located in `src/components/`:
 - name: "My Service"
   type: "<type>"
   logo: "assets/tools/sample.png" # Optional
-  url: https://my-service.url # Optional: Card link and API base url unless 'endpoint' is provided (see below) 
+  url: https://my-service.url # Optional: Card link and API base url unless 'endpoint' is provided (see below)
   endpoint: https://my-service-api.url # Optional: alternative base URL used to fetch service data when necessary.
   useCredentials: false # Optional: Override global proxy.useCredentials configuration.
   headers: # Optional: Override global proxy.headers configuration.
@@ -96,8 +96,8 @@ Displays AdGuard Home protection status and blocked query statistics.
 
 > **Note**: If AdGuard Home’s web user is password-protected, you must pass Authorization HTTP header along with all requests. It can be done using a proxy or adding the following to the item configuration:
 >
-> ```yaml  
-> headers:  
+> ```yaml
+> headers:
 >   Authorization: "Basic <base64-encoded for username:password>"
 > ```
 
@@ -302,7 +302,7 @@ The url must be the root url of Lidarr, Prowlarr, Readarr, Radarr or Sonarr appl
 
 **API Key**:  The Lidarr, Prowlarr, Readarr, Radarr or Sonarr API key can be found in `Settings` > `General`. It is needed to access the API.
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > **Radarr API V3 support**: If you are using an older version of Radarr or Sonarr which don't support the new V3 api endpoints, add the following line to your service config `"legacyApi: true"`
 
 ## Linkding
@@ -386,7 +386,7 @@ Moonraker's API mimmicks a few of OctoPrint's endpoints which makes these servic
   endpoint: "https://my-service-api.url:port"
   apikey: "<---insert-api-key-here--->"
   display: "text" # 'text' or 'bar'. Default to `text`.
-  
+
 ```
 
 ## Olivetin
@@ -435,7 +435,7 @@ The following configuration is available for the OpenWeatherMap service:
   locationId: "2759794" # Optional: Specify OpenWeatherMap city ID for better accuracy
   units: "metric" # units to display temperature. Can be one of: metric, imperial, kelvin. Defaults to kelvin.
   background: "square" # choose which type of background you want behind the image. Can be one of: square, circle, none. Defaults to none.
-  
+
 ```
 
 **Remarks:**
@@ -564,7 +564,7 @@ Displays container counts (running/dead/misc), version, and online status from y
 
 ## Proxmox
 
-Displays status information of a Proxmox node (VMs running and disk, memory and cpu used). 
+Displays status information of a Proxmox node (VMs running and disk, memory and cpu used).
 
 ```yaml
 - name: "Proxmox - Node"
@@ -632,7 +632,7 @@ for setting up rTorrent.
 
 ## SABnzbd
 
-Displays the number of currently active downloads on your SABnzbd instance. 
+Displays the number of currently active downloads on your SABnzbd instance.
 
 ```yaml
 - name: "SABnzbd"
@@ -677,7 +677,7 @@ Displays the number of currently active streams on you Plex instance.
   type: "Tautulli"
   logo: "assets/tools/sample.png"
   url: https://my-service.url
-  checkInterval: 5000 # (Optional) Interval (in ms) for updating the status  
+  checkInterval: 5000 # (Optional) Interval (in ms) for updating the status
   apikey: "<---insert-api-key-here--->"
 ```
 
@@ -717,7 +717,7 @@ Displays Traefik.
   type: "Traefik"
   logo: "assets/tools/sample.png"
   url: "http://traefik.example.com"
-  # basic_auth: "admin:password"  # (Optional) Send Authorization header. 
+  # basic_auth: "admin:password"  # (Optional) Send Authorization header.
 ```
 
 **Authentication**: If BasicAuth is set, credentials will be encoded in Base64 and sent as an Authorization header (`Basic <encoded_value>`). The value must be formatted as "admin:password".
