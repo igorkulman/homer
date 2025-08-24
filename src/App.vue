@@ -150,6 +150,17 @@ export default {
       return (this.loaded && !this.services) || this.configNotFound;
     },
   },
+  watch: {
+    config: {
+      handler() {
+        this.updateThemeColor();
+      },
+      deep: true,
+    },
+    isDark() {
+      this.updateThemeColor();
+    },
+  },
   created: async function () {
     this.buildDashboard();
     window.onhashchange = this.buildDashboard;
@@ -282,6 +293,18 @@ export default {
       let style = document.createElement("style");
       style.appendChild(document.createTextNode(css));
       document.head.appendChild(style);
+    },
+    updateThemeColor: function () {
+      this.$nextTick(() => {
+        const backgroundColor = getComputedStyle(
+          document.body,
+        ).getPropertyValue("--background");
+        if (backgroundColor) {
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute("content", backgroundColor.trim());
+        }
+      });
     },
   },
 };
