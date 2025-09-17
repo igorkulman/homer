@@ -130,7 +130,7 @@ export default {
 
       // Use proxy if enabled to avoid CORS issues
       if (this.item.useProxy || this.proxy?.enabled) {
-        url = `/api/proxy/${url}`;
+        url = `/api/proxy/${encodeURIComponent(url)}`;
 
         // When using proxy, credentials should be handled via headers
         if (options.credentials) {

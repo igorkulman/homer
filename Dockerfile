@@ -15,7 +15,7 @@ COPY . .
 RUN pnpm build
 
 # production stage
-FROM alpine:3.21
+FROM node:22-alpine3.21
 
 ARG VERSION_TAG=latest
 
@@ -30,14 +30,15 @@ LABEL \
     org.opencontainers.image.source="https://github.com/bastienwirtz/homer" \
     org.opencontainers.image.url="https://hub.docker.com/r/b4bz/homer"
 
-ENV GID=1000 \
-    UID=1000 \
+ENV GID=1001 \
+    UID=1001 \
     PORT=8080 \
     SUBFOLDER="/_" \
     INIT_ASSETS=1 \
     IPV6_DISABLE=0
 
-RUN addgroup -S lighttpd -g ${GID} && adduser -D -S -u ${UID} lighttpd lighttpd && \
+RUN addgroup -S lighttpd -g ${GID} && \
+    adduser -D -S -u ${UID} lighttpd lighttpd && \
     apk add -U --no-cache tzdata lighttpd
 
 WORKDIR /www
@@ -45,8 +46,10 @@ WORKDIR /www
 COPY lighttpd.conf /lighttpd.conf
 COPY lighttpd-ipv6.sh /etc/lighttpd/ipv6.sh
 COPY entrypoint.sh /entrypoint.sh
+COPY proxy-server.js /www/proxy-server.js
 COPY --from=build-stage --chown=${UID}:${GID} /app/dist /www/
 COPY --from=build-stage --chown=${UID}:${GID} /app/dist/assets /www/default-assets
+COPY --from=build-stage --chown=${UID}:${GID} /app/node_modules /www/node_modules
 
 USER ${UID}:${GID}
 
