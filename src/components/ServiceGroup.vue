@@ -53,7 +53,7 @@ export default {
       default: false,
     },
     proxy: {
-      type: String,
+      type: Object,
       default: null,
     },
     columns: {
