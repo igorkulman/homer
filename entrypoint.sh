@@ -13,6 +13,9 @@ if [[ "${INIT_ASSETS}" == "1" ]] && [[ ! -f "/www/assets/config.yml" ]]; then
     fi
 fi
 
+echo "Starting proxy server"
+node /www/proxy-server.js &
+
 echo "Starting webserver"
 exec 3>&1
 exec lighttpd -D -f /lighttpd.conf
