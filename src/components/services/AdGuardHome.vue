@@ -11,11 +11,11 @@
         </template>
       </p>
     </template>
-    <template #indicator>
+    <!-- <template #indicator>
       <div class="status" :class="protection">
         {{ protection }}
       </div>
-    </template>
+    </template> -->
   </Generic>
 </template>
 
