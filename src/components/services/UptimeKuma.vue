@@ -7,15 +7,18 @@
           {{ item.subtitle }}
         </template>
         <template v-else-if="status">
-          {{ statusMessage }}
+          <span class="uptime-display">
+            <i class="fas fa-heartbeat"></i>
+            <span class="uptime-value">{{ uptime }}% uptime</span>
+          </span>
         </template>
       </p>
     </template>
-    <template #indicator>
+    <!-- <template #indicator>
       <div v-if="status" class="status" :class="status">
         {{ uptime }}&percnt;
       </div>
-    </template>
+    </template> -->
   </Generic>
 </template>
 
@@ -130,6 +133,16 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.uptime-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.uptime-value {
+  font-weight: 500;
+}
+
 .status {
   font-size: 0.8rem;
   color: var(--text-title);
