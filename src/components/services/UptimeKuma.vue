@@ -6,19 +6,18 @@
         <template v-if="item.subtitle">
           {{ item.subtitle }}
         </template>
-        <template v-else-if="status">
-          <span class="uptime-display">
-            <i class="fas fa-heartbeat"></i>
-            <span class="uptime-value">{{ uptime }}% uptime</span>
-          </span>
-        </template>
+        <!-- <template v-else>
+          {{ statusMessage }}
+        </template> -->
       </p>
     </template>
-    <!-- <template #indicator>
-      <div v-if="status" class="status" :class="status">
-        {{ uptime }}&percnt;
+    <template #indicator>
+      <div v-if="downMonitors > 0" class="notifs">
+        <strong class="notif errors" :title="`${downMonitors} monitor(s) down`">
+          {{ downMonitors }}
+        </strong>
       </div>
-    </template> -->
+    </template>
   </Generic>
 </template>
 
@@ -109,6 +108,19 @@ export default {
       const percent = data.reduce((a, b) => a + b, 0) / data.length || 0;
       return (percent * 100).toFixed(1);
     },
+    downMonitors: function () {
+      if (!this.heartbeat || !this.heartbeat.heartbeatList) {
+        return 0;
+      }
+      let downCount = 0;
+      for (const id in this.lastHeartBeatList) {
+        if (this.lastHeartBeatList[id].status === 0) {
+          // 0 = down
+          downCount++;
+        }
+      }
+      return downCount;
+    },
   },
   created() {
     /* eslint-disable */
@@ -117,13 +129,13 @@ export default {
   },
   methods: {
     fetchStatus: function () {
-      const now = Date.now()
+      const now = Date.now();
       this.fetch(`/api/status-page/${this.dashboard}?cachebust=${now}`)
         .catch((e) => console.error(e))
         .then((resp) => (this.incident = resp));
 
       this.fetch(
-        `/api/status-page/heartbeat/${this.dashboard}?cachebust=${now}`
+        `/api/status-page/heartbeat/${this.dashboard}?cachebust=${now}`,
       )
         .catch((e) => console.error(e))
         .then((resp) => (this.heartbeat = resp));
@@ -133,14 +145,25 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.uptime-display {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
+.notifs {
+  position: absolute;
+  color: white;
+  font-family: sans-serif;
+  top: 0.3em;
+  right: 0.5em;
 
-.uptime-value {
-  font-weight: 500;
+  .notif {
+    display: inline-block;
+    padding: 0.2em 0.35em;
+    border-radius: 0.25em;
+    position: relative;
+    margin-left: 0.3em;
+    font-size: 0.8em;
+
+    &.errors {
+      background-color: #e51111;
+    }
+  }
 }
 
 .status {
