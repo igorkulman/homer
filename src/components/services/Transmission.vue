@@ -30,18 +30,11 @@ export default {
     sessionId: null,
   }),
   created() {
-    // Validate that endpoint is configured
-    if (!this.endpoint) {
-      this.error = true;
-      console.error("Transmission service: No endpoint configured");
-      return;
-    }
+    const interval = parseInt(this.item.interval, 10) || 30000;
 
-    const torrentInterval = parseInt(this.item.torrentInterval, 10) || 30000;
-
-    // Set up intervals if configured (rate and torrent intervals can be different)
-    if (torrentInterval > 0) {
-      setInterval(() => this.getStats(), torrentInterval);
+    // Set up interval if configured
+    if (interval > 0) {
+      setInterval(() => this.getStats(), interval);
     }
 
     // Initial fetch
@@ -62,42 +55,44 @@ export default {
         body: JSON.stringify(requestData),
       };
 
+      // Add HTTP Basic Auth if credentials are provided
+      if (this.item.auth) {
+        const credentials = btoa(this.item.auth);
+        options.headers["Authorization"] = `Basic ${credentials}`;
+      }
+
       // Add session ID header if we have one
       if (this.sessionId) {
         options.headers["X-Transmission-Session-Id"] = this.sessionId;
       }
 
       try {
-        const response = await this.fetch("/transmission/rpc", options);
-        return response;
+        return await this.fetch("transmission/rpc", options);
       } catch (error) {
-        // Handle session ID requirement
-        if (error.status === 409) {
-          // Extract session ID from X-Transmission-Session-Id header or response text
-          let sessionId = error.headers?.["x-transmission-session-id"];
+        // Handle Transmission's 409 session requirement
+        if (error.message.includes("409")) {
+          // Make a direct request to get session ID
+          let url = this.endpoint;
+          if (url && !url.endsWith("/")) {
+            url += "/";
+          }
+          url += "transmission/rpc";
 
-          if (!sessionId && error.responseText) {
-            // Extract session ID from the HTML error response
-            const sessionIdMatch = error.responseText.match(
-              /X-Transmission-Session-Id: ([a-zA-Z0-9]+)/,
-            );
-            if (sessionIdMatch) {
-              sessionId = sessionIdMatch[1];
+          const sessionResponse = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ method: "session-get" }),
+          });
+
+          if (sessionResponse.status === 409) {
+            this.sessionId = sessionResponse.headers.get("X-Transmission-Session-Id");
+            if (this.sessionId) {
+              options.headers["X-Transmission-Session-Id"] = this.sessionId;
+              return await this.fetch("transmission/rpc", options);
             }
           }
-
-          if (sessionId) {
-            this.sessionId = sessionId;
-
-            // Retry with session ID
-            options.headers["X-Transmission-Session-Id"] = this.sessionId;
-            const retryResponse = await this.fetch(
-              "/transmission/rpc",
-              options,
-            );
-            return retryResponse;
-          }
         }
+        console.error("Transmission RPC error:", error);
         throw error;
       }
     },
