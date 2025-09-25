@@ -84,10 +84,14 @@ export default {
     },
   },
   created() {
-    const updateInterval = parseInt(this.item.updateInterval, 10) || 0;
-    if (updateInterval > 0) {
-      setInterval(() => this.fetchData(), updateInterval);
+    const interval = parseInt(this.item.interval, 10) || 30000;
+
+    // Set up interval if configured
+    if (interval > 0) {
+      setInterval(() => this.fetchData(), interval);
     }
+
+    // Initial fetch
     this.fetchData();
   },
   methods: {
@@ -193,13 +197,8 @@ export default {
           await this.authenticateUnifi();
         }
 
-        // Fetch clients and devices data
-        const [clientsData, devicesData] = await Promise.all([
-          this.fetch(`${this.prefix}/api/s/${this.site}/stat/sta`),
-          this.fetch(`${this.prefix}/api/s/${this.site}/stat/device`),
-        ]);
-
-        this.clients = clientsData.data?.length || 0;
+        // Fetch devices data only
+        const devicesData = await this.fetch(`${this.prefix}/api/s/${this.site}/stat/device`);
 
         // Count access points (devices with type 'uap')
         this.accessPoints =
@@ -208,6 +207,13 @@ export default {
 
         // Count other devices (exclude access points to avoid double counting)
         this.devices = (devicesData.data?.length || 0) - this.accessPoints;
+
+        // For clients, we can use the total connected clients from devices that report client counts
+        // or set to null if we don't have this data from devices endpoint
+        this.clients = devicesData.data?.reduce((total, device) => {
+          return total + (device.num_sta || 0);
+        }, 0) || null;
+
         this.serverError = false;
       } catch (e) {
         console.error("UniFi service error:", e);
